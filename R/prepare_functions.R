@@ -1,7 +1,21 @@
-#' @import tools
-#' @import data.table
-#' @import snpStats
-NULL
+#' @export
+initialize_report_parameter<-
+  function(
+    plinkBed,
+    ReportRace=FALSE,
+    RaceToG1000Maf=c(A="EAS",ASIAN="EAS",B="AFR",BLACK="AFR",W="EUR",WHITE="EUR",H="AMR",I="SAS"),
+    MafOutlierCut=0.3
+  ) {
+
+    dataForReport=list()
+    dataForReport$ReportRace=ReportRace
+    dataForReport$RaceToG1000Maf=RaceToG1000Maf
+    dataForReport$MafOutlierCut=MafOutlierCut
+
+    return(dataForReport)
+}
+
+#' @export
 preparePlinkData<-function(plinkBed) {
   dataForReport<-list()
   #####################################
@@ -26,7 +40,7 @@ preparePlinkData<-function(plinkBed) {
 
   dataForReport$SampleSummary <- row.summary(plinkRaw$genotypes) #takes about 5 minutes
   #head(dataForReport$SampleSummary)
-
+  return(dataForReport)
 }
 
 #' prepareDataForReport

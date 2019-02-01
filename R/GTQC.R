@@ -2,7 +2,9 @@
 #' @import GenomicRanges
 #' @import dndscv
 #' @import GenomeInfoDb
-#' @importMethodsFrom GenomicRanges reduce
+#' @import tools
+#' @import data.table
+#' @import snpStats
 usethis::use_package("data.table","Depends")
 usethis::use_package("maftools","Depends")
 usethis::use_package("htmltools","Depends")
