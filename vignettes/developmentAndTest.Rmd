@@ -1,0 +1,33 @@
+---
+title: "Development and tests"
+author: "Shilin Zhao"
+date: "1/24/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Development
+
+```{r}
+library(here)
+source(here("R","prepare_functions.R"))
+
+
+initialize_report_parameter(plinkBed="")
+
+
+dataForReport=preparePlinkData(plinkBed="D:\\temp\\1kg_phase1_chrY.bed",
+                 select.snps=c("rs202112724","rs201588461","rs11575897","rs2534636","rs1800865"))
+
+htmlTempl<-here("inst","template","/QcReportTemplate.Rmd")
+outFile="D:\\temp\\report.html"
+render(htmlTempl,output_file=outFile)
+
+```
+
+
+
+
