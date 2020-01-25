@@ -1,0 +1,229 @@
+---
+title: "Genotyping QC Report"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document:
+    toc: true
+---
+
+
+```{r,echo=FALSE,message=FALSE,warning=FALSE}
+library(knitr)
+opts_chunk$set(cache=FALSE)
+
+#source("/home/zhaos/source/r_cqs/myPkg/R/htmlTable.R")
+
+#packages
+library(ggplot2)
+library(formattable)
+library(htmltools)
+
+#functions used in the report
+plotVar<-function(rawTable,varName="Call.rate",pattern=NULL,meltTable=TRUE,reportRace=FALSE) {
+  if (is.null(pattern)) {
+    pattern=paste0("^Race\\.\\w+\\.",varName)
+  }
+  if (reportRace) {
+    if (meltTable) {
+      selectedCol<-grep(pattern,colnames(rawTable))
+      dataForPlot<-melt(rawTable[,..selectedCol],variable.name="Race",value.name=varName,measure=1:length(selectedCol))
+    } else {
+      dataForPlot<-rawTable
+    }
+    p<-ggplot(subset(dataForPlot,!is.na(Race)), aes_string(varName)) +geom_histogram()+facet_wrap(~Race,scales = "free")
+  } else {
+    p<-ggplot(rawTable, aes_string(varName)) +geom_histogram()
+  }
+  print(p)
+}
+
+```
+
+
+# Result Summary
+
+```{r,echo=FALSE,results='asis',message=FALSE,fig.align='center',warning=FALSE}
+if (!is.null(dataForReport$SummaryTable)) {
+  makeFormatTable(dataForReport$SummaryTable)
+}
+```
+
+# Overall Call Rate Quality
+## Sample Call Rate
+
+```{r,echo=FALSE,results='asis',message=FALSE,fig.align='center'}
+#makeFormatTable(head(sampleSummary))
+dataForTable<-makeSummaryTable(dataForReport$SampleSummary$Call.rate,valueCut=c(0.9,0.95,0.96,0.97,0.98,0.99,0.995,0.999))
+makeFormatTable(dataForTable,percentColInd=3)
+plotVar(dataForReport$SampleSummary,varName="Call.rate",meltTable=FALSE,reportRace=FALSE)
+```
+
+## SNP Call Rate
+
+```{r,echo=FALSE,results='asis',message=FALSE,fig.align='center'}
+#makeFormatTable(head(snpsum))
+dataForTable<-makeSummaryTable(dataForReport$SnpSummary$Call.rate,valueCut=c(0.9,0.95,0.96,0.97,0.98,0.99))
+makeFormatTable(dataForTable,percentColInd=3)
+plotVar(dataForReport$SnpSummary,varName="Call.rate",reportRace=FALSE)
+```
+
+# MAF
+```{r,echo=FALSE,results='asis',message=FALSE,fig.align='center',warning=FALSE}
+#makeFormatTable(head(snpsum))
+dataForTable<-makeSummaryTable(dataForReport$SnpSummary$MAF,valueCut=c(0.0001,0.0005,0.001,0.005,0.01,0.05))
+makeFormatTable(dataForTable,percentColInd=3)
+plotVar(dataForReport$SnpSummary,varName="MAF")
+```
+
+## MAF Consistency with 1000 Genome
+
+```{r,echo=FALSE,results='asis',message=FALSE,fig.align='center',warning=FALSE}
+if (exists("G1000MafFile") && !is.null(G1000MafFile)) {
+  snpSummaryOutColNames1<-c("chromosome","position","snp.name","allele.1","allele.2")
+  snpSummaryOutColNames3<-c("G1000.id","G1000.ref","G1000.alt")
+  
+  temp1<-dataForReport$SnpSummary[,G1000.ALL]
+  temp2<-dataForReport$SnpSummary[,MAF]
+  plot(temp1,temp2,pch=16,cex=0.2,xlab="MAF in 1000 Genomes",ylab="MAF in this data",main="Overall MAF")
+  mafOutlierDiff<-temp2-temp1
+  mafOutlierInd<-which(abs(mafOutlierDiff)>=dataForReport$MafOutlierCut)
+  if (length(mafOutlierInd)>0) { #Outlier MAF
+    mafOutlierDiff<-mafOutlierDiff[mafOutlierInd]
+    
+    snpSummaryOutColNames2<-c("MAF")
+    snpSummaryOutColNames4<-c("G1000.ALL")
+    snpSummaryOutColNames<-c(snpSummaryOutColNames1,snpSummaryOutColNames2,snpSummaryOutColNames3,snpSummaryOutColNames4)
+    
+    mafOutlierTable<-dataForReport$SnpSummary[mafOutlierInd,..snpSummaryOutColNames]
+    mafOutlierTable[,Diff:=mafOutlierDiff]
+    setorder(mafOutlierTable, -Diff)
+    
+    cat("\n\n### MAF Outliers with 1000 Genome\n")
+    out=list(makeFormatTable(mafOutlierTable,makeIntoDT=TRUE))
+    print(tagList(out))
+  }
+  
+  if (dataForReport$ReportRace) {
+    cat("\n\n### MAF Consistency with 1000 Genome Race\n")
+    for (i in 1:nrow(dataForReport$MafReportPairs)) {
+      temp1<-dataForReport$SnpSummary[,get(dataForReport$MafReportPairs[i,1])]
+      temp2<-dataForReport$SnpSummary[,get(dataForReport$MafReportPairs[i,2])]
+      plot(temp1,temp2,pch=16,cex=0.2,xlab="MAF in 1000 Genomes",ylab="MAF in this data",main=paste0(dataForReport$MafReportPairs[i,2]))
+      
+      mafOutlierDiff<-temp2-temp1
+      mafOutlierInd<-which(abs(mafOutlierDiff)>=dataForReport$MafOutlierCut)
+      if (length(mafOutlierInd)>0) { #Outlier MAF
+          mafOutlierDiff<-mafOutlierDiff[mafOutlierInd]
+          snpSummaryOutColNames2<-dataForReport$MafReportPairs[i,2]
+          snpSummaryOutColNames4<-dataForReport$MafReportPairs[i,1]
+          snpSummaryOutColNames<-c(snpSummaryOutColNames1,snpSummaryOutColNames2,snpSummaryOutColNames3,snpSummaryOutColNames4)
+    
+          mafOutlierTable<-dataForReport$SnpSummary[mafOutlierInd,..snpSummaryOutColNames]
+          mafOutlierTable[,Diff:=mafOutlierDiff]
+          setorder(mafOutlierTable, -Diff)
+
+          out=list(makeFormatTable(mafOutlierTable,makeIntoDT=TRUE))
+          print(tagList(out))
+      }
+      
+    }
+  }
+}
+```
+
+# Consistency 
+## Duplicate SNPs
+### SNP level
+```{r,echo=FALSE,results='asis',message=FALSE,fig.align='center',warning=FALSE}
+if (!is.null(dataForReport$DuplicateSnpsConcordance$SnpLevel)) {
+  makeFormatTable(dataForReport$DuplicateSnpsConcordance$SnpLevel,makeIntoDT=TRUE)
+}
+```
+
+
+### Sample Level
+```{r,echo=FALSE,results='asis',message=FALSE,fig.align='center',warning=FALSE}
+if (!is.null(dataForReport$DuplicateSnpsConcordance$SampleLevel)) {
+  makeFormatTable(dataForReport$DuplicateSnpsConcordance$SampleLevel,makeIntoDT=TRUE)
+}
+```
+
+## Duplicate Samples
+### SNP level
+```{r,echo=FALSE,results='asis',message=FALSE,fig.align='center',warning=FALSE}
+if (!is.null(dataForReport$DuplicateSamplesConcordance$SnpLevel)) {
+  makeFormatTable(dataForReport$DuplicateSamplesConcordance$SnpLevel,makeIntoDT=TRUE)
+}
+```
+
+
+### Sample Level
+```{r,echo=FALSE,results='asis',message=FALSE,fig.align='center',warning=FALSE}
+if (!is.null(dataForReport$DuplicateSamplesConcordance$SampleLevel)) {
+  makeFormatTable(dataForReport$DuplicateSamplesConcordance$SampleLevel,makeIntoDT=TRUE)
+}
+```
+
+
+## Samples in 1000 Genome
+### SNP level
+```{r,echo=FALSE,results='asis',message=FALSE,fig.align='center',warning=FALSE}
+if (!is.null(dataForReport$G1000SamplesConcordance$SnpLevel)) {
+  makeFormatTable(dataForReport$G1000SamplesConcordance$SnpLevel,makeIntoDT=TRUE)
+}
+```
+
+
+### Sample Level
+```{r,echo=FALSE,results='asis',message=FALSE,fig.align='center',warning=FALSE}
+if (!is.null(dataForReport$G1000SamplesConcordance$SampleLevel)) {
+  makeFormatTable(dataForReport$G1000SamplesConcordance$SampleLevel,makeIntoDT=TRUE)
+}
+```
+
+
+
+# Gender Check
+```{r,echo=FALSE,results='asis',message=FALSE,fig.align='center',warning=FALSE}
+if (!is.null(dataForReport$GenderCheckTable)) {
+  makeFormatTable(dataForReport$GenderCheckTable,makeIntoDT=TRUE)
+}
+```
+
+
+# HWE
+```{r,echo=FALSE,results='asis',message=FALSE,fig.align='center',warning=FALSE}
+plotVar(dataForReport$SnpSummary,varName="z.HWE")
+dataForTable<-makeSummaryTable(dataForReport$SnpSummary$z.HWE,valueCut=c(0.0001,0.0005,0.001,0.005,0.01,0.05))
+makeFormatTable(dataForTable,percentColInd=3)
+```
+
+```{r,echo=FALSE,results='asis',message=FALSE,fig.align='center',warning=FALSE}
+#hwePCol<-grep("\\.\\p\\.HWE$",colnames(dataForReport$SnpSummary))
+#if (length(hwePCol)>0) {
+#  dataForTable<-makeSummaryTable(dataForReport$SnpSummary[,..hwePCol],valueCut=c(0.0001,0.0005,0.001,0.005,0.01,0.05))
+#  makeFormatTable(dataForTable,percentColInd=3)
+#}
+```
+
+# Ratios
+```{r,echo=FALSE,results='asis',message=FALSE,fig.align='center',warning=FALSE}
+if (!is.null(dataForReport$SampleRatio) & !is.null(dataForReport$SampleSummary$Race)) {
+    dataForPlot<-data.frame(dataForReport$SampleRatio,Race=dataForReport$SampleSummary$Race)
+    p<-ggplot(dataForPlot,aes(x=Race,y=ratio01By11))+geom_boxplot()
+    print(p)
+}
+
+```
+
+
+# AIM PCA
+```{r,echo=FALSE,results='asis',message=FALSE,fig.align='center',warning=FALSE}
+if (!is.null(dataForReport$AimPcaResult)) {
+    dataForPlot<-data.frame(dataForReport$AimPcaResult,Race=dataForReport$SampleSummary$Race)
+    p<-ggplot(dataForPlot,aes(x=PC1,y=PC2))+geom_point(aes(colour=Race))
+    print(p)
+}
+
+```
+
