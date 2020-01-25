@@ -16,13 +16,14 @@ initialize_report_parameter<-
 }
 
 #' @export
-preparePlinkData<-function(plinkBed) {
+
+preparePlinkData<-function(plinkBed,checkRefAllele=TRUE,dupSnpFile=NULL,dupSampleFile=NULL,aimFile=NULL,...) {
   dataForReport<-list()
   #####################################
   #read plink data
   #####################################
 
-  plinkRaw <- read.plink(plinkBed) #bim and fam will be added automaticlly
+  plinkRaw <- read.plink(plinkBed,...) #bim and fam will be added automaticlly
   row.names(plinkRaw$genotypes)<-plinkRaw$fam$member
 
   totalSampleNum=nrow(plinkRaw$fam)
@@ -40,8 +41,93 @@ preparePlinkData<-function(plinkBed) {
 
   dataForReport$SampleSummary <- row.summary(plinkRaw$genotypes) #takes about 5 minutes
   #head(dataForReport$SampleSummary)
+
+  #####################################
+  #hg19 reference allele
+  #####################################
+  if (checkRefAllele) {
+    print(paste0("Checking if the major alleles are hg19 reference alleles:"))
+    chrToCheck=dataForReport$SnpSummary$chromosome
+    chrToCheck[chrToCheck==23]="X"
+    chrToCheck[chrToCheck==24]="Y"
+    chrToCheck=paste0("chr",chrToCheck)
+    genomeRefAllele<-getSeq(Hsapiens,chrToCheck,dataForReport$SnpSummary$position,width=1, as.character=TRUE)
+    majorAlleleAsRef<-rep(NA,totalSnpNum)
+    majorAlleleAsRef[which(dataForReport$SnpSummary$allele.1==genomeRefAllele)]<-0
+    majorAlleleAsRef[which(dataForReport$SnpSummary$allele.2==genomeRefAllele)]<-1
+    print(paste0("Identified ",length(which(majorAlleleAsRef==1))," probes with Major allele as Reference Allele in Genome; ",length(which(majorAlleleAsRef==0))," probes with Minor allele as Reference Allele; ",length(which(is.na(majorAlleleAsRef)))," probes with No Reference Allele;"))
+
+    dataForReport$SnpSummary$MajorAlleleAsRef<-majorAlleleAsRef
+  }
+
+  ######################################
+  #work on duplicate SNPs
+  ######################################
+  if (!is.null(dupSnpFile)) {
+    print(paste0("Analyzing Concordance of duplicate SNPs:"))
+    dataForReport$DuplicateSnpsConcordance=snpsComp(snpMatrix1=plinkRaw$genotypes,dupSnpFile=dupSnpFile,sampleConcordanceCutoff=0.5)
+  }
+
+  ######################################
+  #work on duplicate Samples
+  ######################################
+  if (!is.null(dupSampleFile)) {
+    print(paste0("Analyzing Concordance of duplicate Samples:"))
+    dataForReport$DuplicateSamplesConcordance=snpsComp(snpMatrix1=plinkRaw$genotypes,dupSampleFile=dupSampleFile,snpConcordanceCutoff=0.5)
+  }
+
+  #no plink outdir at this time
+  #	######################################
+  #	#sex check by plink
+  #	######################################
+  #	genderCheckFile<-paste0(plinkOutDir,"/genderCheck.sexcheck")
+  #	if (!file.exists(genderCheckFile)) {
+  #		print(paste0("Gender Check by Plink:"))
+  #		plinkCmd<-paste0("plink --noweb --bfile ",file_path_sans_ext(plinkBed)," --maf 0.1 --check-sex --out ",file_path_sans_ext(genderCheckFile))
+  #		system(plinkCmd)
+  #	}
+  #	dataForReport$GenderCheckTable<-read.table(genderCheckFile,header=T,as.is=T)
+  #	dataForReport$GenderCheckTable<-dataForReport$GenderCheckTable[which(dataForReport$GenderCheckTable$STATUS=="PROBLEM"),]
+
+  ######################################
+  #Hardy-weinberg equilibrium
+  ######################################
+  #pvalue2sided=2*pnorm(-abs(z))
+  hweZCol<-grep("\\z\\.HWE$",colnames(dataForReport$SnpSummary))
+  if (length(hweZCol)>0) {
+    print(paste0("Analyzing Hardy-weinberg equilibrium:"))
+    temp<-as.data.table(2*pnorm(-abs(as.matrix(dataForReport$SnpSummary[,..hweZCol]))))
+    colnames(temp)<-gsub("\\z\\.HWE$","p.HWE",colnames(temp))
+    dataForReport$SnpSummary<-cbind(dataForReport$SnpSummary,temp)
+  }
+
+  #######################################
+  #Ratio
+  #######################################
+  print(paste0("Analyzing Snps Ratios:"))
+  dataForReport$SampleRatio=snpMatrixToRatio(plinkRaw$genotypes)
+
+  #######################################
+  #aimFile
+  #######################################
+  if (!is.null(aimFile)) {
+    aimProbes<-readLines(aimFile)
+    temp<-intersect(colnames(plinkRaw$genotypes),aimProbes)
+    if (length(temp)>0) {
+      print(paste0("Analyzing Race related AIM probes:"))
+      print(paste0(length(temp)," AIM probes identified and will be used for PCA analysis."))
+      aimPcaResult<-aimSnpMatrixPca(plinkRaw$genotypes[,temp])
+      colnames(aimPcaResult)<-paste0("PC",1:10)
+      dataForReport$AimPcaResult=aimPcaResult
+
+    } else {
+      break(paste0("aimFile provided, but no oveelaps between probes in this data and in aimFile."))
+    }
+  }
+
   return(dataForReport)
 }
+
 
 #' prepareDataForReport
 #'
