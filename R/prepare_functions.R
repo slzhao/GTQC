@@ -24,7 +24,7 @@ preparePlinkData<-function(plinkBed,checkRefAllele=TRUE,dupSnpFile=NULL,dupSampl
   #####################################
 
   plinkRaw <- read.plink(plinkBed,...) #bim and fam will be added automaticlly
-  row.names(plinkRaw$genotypes)<-plinkRaw$fam$member
+  #row.names(plinkRaw$genotypes)<-plinkRaw$fam$member
 
   totalSampleNum=nrow(plinkRaw$fam)
   totalSnpNum=nrow(plinkRaw$map)
@@ -146,7 +146,7 @@ prepareDataForReport<-function(plinkBed,outFile=paste0(plinkBed,".GenoTypingQC.h
   #####################################
 
   plinkRaw <- read.plink(plinkBed) #bim and fam will be added automaticlly
-  row.names(plinkRaw$genotypes)<-plinkRaw$fam$member
+  #row.names(plinkRaw$genotypes)<-plinkRaw$fam$member
 
   totalSampleNum=nrow(plinkRaw$fam)
   totalSnpNum=nrow(plinkRaw$map)

@@ -16,7 +16,7 @@ library(here)
 source(here("R","prepare_functions.R"))
 
 
-initialize_report_parameter(plinkBed="")
+dataForReport=initialize_report_parameter(plinkBed="")
 
 
 dataForReport=preparePlinkData(plinkBed="D:\\temp\\1kg_phase1_chrY.bed",

@@ -14,5 +14,6 @@ usethis::use_package("knitr","Depends")
 usethis::use_package("rmarkdown","Depends")
 usethis::use_package("ggplot2","Depends")
 usethis::use_package("RColorBrewer","Depends")
+usethis::use_package("formattable","Depends")
 usethis::use_package("BiocStyle","Suggests")
 
