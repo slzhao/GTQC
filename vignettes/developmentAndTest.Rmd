@@ -9,16 +9,17 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# Development
+# Test
 
 ```{r}
-library(here)
-source(here("R","prepare_functions.R"))
+#library(here)
+#source(here("R","prepare_functions.R"))
+devtools::load_all(".")
 
+plinkBed="D:\\temp\\1kg_phase1_chrY.bed"
+dataForReport=initialize_report_parameter(plinkBed=plinkBed)
 
-initialize_report_parameter(plinkBed="")
-
-
+library(BSgenome.Hsapiens.UCSC.hg19)
 dataForReport=preparePlinkData(plinkBed="D:\\temp\\1kg_phase1_chrY.bed",
                  select.snps=c("rs202112724","rs201588461","rs11575897","rs2534636","rs1800865"))
 
@@ -28,6 +29,14 @@ render(htmlTempl,output_file=outFile)
 
 ```
 
+# Development
+
+##1000G MAF/R package
+```{r}
+library("MafDb.1Kgenomes.phase3.hs37d5")
+mafdb <- MafDb.1Kgenomes.phase3.hs37d5
+gscores(mafdb, GRanges("15:28356859"))
 
 
+```
 
