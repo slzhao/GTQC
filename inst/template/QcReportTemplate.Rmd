@@ -34,7 +34,7 @@ plotVar<-function(rawTable,varName="Call.rate",pattern=NULL,meltTable=TRUE,repor
   } else {
     dataForPlot=rawTable
   }
-  if (class(dataForPlot)=="DFrame") {
+  if (class(dataForPlot)=="DFrame" | class(dataForPlot)=="DataFrame") {
     dataForPlot=as.data.frame(dataForPlot)
   }
   p<-ggplot(dataForPlot, aes_string(varName)) +geom_histogram()

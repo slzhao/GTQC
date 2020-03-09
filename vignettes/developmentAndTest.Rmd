@@ -39,9 +39,13 @@ render(htmlTempl,output_file=outFile)
 devtools::load_all(".")
 
 dataDir=paste0(Sys.getenv("WORKDIR"),"/GTQC/20200213_pkgDev1/")
-plinkBed=paste0(dataDir,"1kg_phase1_chrY.bed")
+#plinkBed=paste0(dataDir,"1kg_phase1_chrY.bed")
+#dataForReport=processingPlinkData(plinkBed,
+#                                  dupSnpFile=paste0(dataDir,"1kg_phase1_chrY.DupSnps"),
+#                                  dupSampleFile=paste0(dataDir,"1kg_phase1_chrY.DupSamples"),
+#                                  raceFile=paste0(dataDir,"1kg_phase1.race"))
+plinkBed=paste0(dataDir,"1kg_phase1_chr21.bed")
 dataForReport=processingPlinkData(plinkBed,
-                                  dupSnpFile=paste0(dataDir,"1kg_phase1_chrY.DupSnps"),
                                   dupSampleFile=paste0(dataDir,"1kg_phase1_chrY.DupSamples"),
                                   raceFile=paste0(dataDir,"1kg_phase1.race"))
 
