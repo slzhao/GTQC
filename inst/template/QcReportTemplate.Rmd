@@ -91,7 +91,7 @@ plotVar(dataForReport$SnpSummary,varName="MAF")
   
   temp1<-dataForReport$SnpSummary[,"AF"]
   temp2<-dataForReport$SnpSummary[,"MAF"]
-  plot(temp1,temp2,pch=16,cex=0.2,xlab="MAF in 1000 Genomes",ylab="MAF in this data",main="Overall MAF")
+  plot(temp1,temp2,pch=16,cex=0.3,xlab="MAF in 1000 Genomes",ylab="MAF in this data",main="Overall MAF")
   mafOutlierDiff<-temp2-temp1
   mafOutlierInd<-which(abs(mafOutlierDiff)>=dataForReport$MafOutlierCut)
   if (length(mafOutlierInd)>0) { #Outlier MAF
@@ -113,11 +113,11 @@ plotVar(dataForReport$SnpSummary,varName="MAF")
   }
   
   if (dataForReport$ReportRace) {
-    cat("\n\n### MAF Consistency with 1000 Genome Race\n")
+    cat("\n\n### MAF Consistency with 1000 Genome by Race\n")
     for (i in 1:nrow(dataForReport$MafReportPairs)) {
       temp1<-dataForReport$SnpSummary[,dataForReport$MafReportPairs[i,1]]
       temp2<-dataForReport$SnpSummary[,dataForReport$MafReportPairs[i,2]]
-      plot(temp1,temp2,pch=16,cex=0.2,xlab="MAF in 1000 Genomes",ylab="MAF in this data",main=paste0(dataForReport$MafReportPairs[i,2]))
+      plot(temp1,temp2,pch=16,cex=0.3,xlab="MAF in 1000 Genomes",ylab="MAF in this data",main=paste0(dataForReport$MafReportPairs[i,2]))
       
       mafOutlierDiff<-temp2-temp1
       mafOutlierInd<-which(abs(mafOutlierDiff)>=dataForReport$MafOutlierCut)

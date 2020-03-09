@@ -1,4 +1,8 @@
 
+mapValues=function(x,keyForMapping) {
+  x=plyr::mapvalues(x,from=names(keyForMapping),to=keyForMapping,warn_missing=FALSE)
+  return(x)
+}
 
 summaryTable<-function(dataForReport) {
   reportTable<-data.frame()
@@ -42,30 +46,6 @@ snpMatrixToRatio<-function(snpMatrix) {
   return(result)
 }
 
-#dataForReport$SnpSummary<-MergeG1000MafToSnpSummary(dataForReport$SnpSummary,G1000MafFile)
-MergeG1000MafToSnpSummary<-function(snpSummary,table1000GMerged) {
-
-  temp<-merge(snpSummary,table1000GMerged,by.x=c("chromosome","position"),by.y=c("G1000.chr","G1000.pos"),all.x=TRUE,sort=FALSE)
-  temp[allele.1==G1000.ref & allele.2==G1000.alt,c("G1000.ALL","G1000.AFR","G1000.AMR","G1000.EAS","G1000.EUR","G1000.SAS"):=
-         list(1-G1000.ALL,1-G1000.AFR,1-G1000.AMR,1-G1000.EAS,1-G1000.EUR,1-G1000.SAS)]
-  return(temp)
-  
-#  table1000GMergedMaxMafOut[,G1000.ALL.Adjusted:=G1000.ALL]
-#  table1000GMergedMaxMafOut[ G1000.ALL > 0.5,G1000.ALL.Adjusted:=1-G1000.ALL]
-#  table1000GMergedMaxMafOut[,G1000.AFR.Adjusted:=G1000.AFR]
-#  table1000GMergedMaxMafOut[ G1000.AFR > 0.5,G1000.AFR.Adjusted:=1-G1000.AFR]
-#  table1000GMergedMaxMafOut[,G1000.AMR.Adjusted:=G1000.AMR]
-#  table1000GMergedMaxMafOut[ G1000.AMR > 0.5,G1000.AMR.Adjusted:=1-G1000.AMR]
-#  table1000GMergedMaxMafOut[,G1000.EAS.Adjusted:=G1000.EAS]
-#  table1000GMergedMaxMafOut[ G1000.EAS > 0.5,G1000.EAS.Adjusted:=1-G1000.EAS]
-#  table1000GMergedMaxMafOut[,G1000.EUR.Adjusted:=G1000.EUR]
-#  table1000GMergedMaxMafOut[ G1000.EUR > 0.5,G1000.EUR.Adjusted:=1-G1000.EUR]
-#  table1000GMergedMaxMafOut[,G1000.SAS.Adjusted:=G1000.SAS]
-#  table1000GMergedMaxMafOut[ G1000.SAS > 0.5,G1000.SAS.Adjusted:=1-G1000.SAS]
-#  dataForReport$SnpSummary<-merge(dataForReport$SnpSummary,table1000GMergedMaxMafOut,by.x=c("chromosome","position"),by.y=c("G1000.chr","G1000.pos"),all.x=TRUE,sort=FALSE)
-  
-}
-
 
 #temp=snpsComp(snpMatrix1,snpMatrix2,dupSampleFile=sampleToG1000File)
 snpsComp<-function(snpMatrix1,snpMatrix2=NULL,dupSnpFile=NULL,dupSampleFile=NULL,snpConcordanceCutoff=NULL,sampleConcordanceCutoff=NULL) {
@@ -76,7 +56,7 @@ snpsComp<-function(snpMatrix1,snpMatrix2=NULL,dupSnpFile=NULL,dupSampleFile=NULL
     snpMatrix1<-snpMatrix1[,temp]
     snpMatrix2<-snpMatrix2[,temp]
   }
-  
+
   if (!is.null(dupSnpFile)) { #compare duplicate snps in all samples
     dupSnps<-read.delim(dupSnpFile,header=F,as.is=T)
     #only keep snp pairs both in the data
@@ -87,7 +67,7 @@ snpsComp<-function(snpMatrix1,snpMatrix2=NULL,dupSnpFile=NULL,dupSampleFile=NULL
     dupSnpInd<-which((as.integer(temp1)+as.integer(temp2))==2)
     print(paste0(length(dupSnpInd)," duplicate probe pairs identified in the data"))
     dupSnps<-dupSnps[dupSnpInd,]
-    
+
     temp1<-snpMatrix1[,as.character(dupSnps[,1])]
     temp2<-snpMatrix2[,as.character(dupSnps[,2])]
     colnames(temp1)<-make.unique(colnames(temp1))
@@ -103,7 +83,7 @@ snpsComp<-function(snpMatrix1,snpMatrix2=NULL,dupSnpFile=NULL,dupSampleFile=NULL
     dupSampleInd<-which((as.integer(temp1)+as.integer(temp2))==2)
     print(paste0(length(dupSampleInd)," duplicate sample pairs identified in the data"))
     dupSamples<-dupSamples[dupSampleInd,]
-    
+
     temp1<-snpMatrix1[as.character(dupSamples[,1]),]
     temp2<-snpMatrix2[as.character(dupSamples[,2]),]
     row.names(temp1)<-make.unique(row.names(temp1))
@@ -115,7 +95,7 @@ snpsComp<-function(snpMatrix1,snpMatrix2=NULL,dupSnpFile=NULL,dupSampleFile=NULL
 
   totalSampleNum=nrow(snpsCompResult$row.wise)
   totalSnpNum=nrow(snpsCompResult$col.wise)
-  
+
   #analysis SNP level
   callSampleNum<-totalSampleNum-rowSums(snpsCompResult$col.wise[,c("NA.agree","NA.disagree")])
   homAgreeRate<-snpsCompResult$col.wise[,"Hom.agree"]/callSampleNum
@@ -124,7 +104,7 @@ snpsComp<-function(snpMatrix1,snpMatrix2=NULL,dupSnpFile=NULL,dupSampleFile=NULL
 	  snpsCompResultSnpLevel<-data.frame(SnpDup1=dupSnps[,1],SnpDup2=dupSnps[,2],SamplesCalled=callSampleNum,
 			  HomConcordanceRate=homAgreeRate,AllConcordanceRate=allAgreeRate,
 			  stringsAsFactors=FALSE)
-  } else if (!is.null(dupSampleFile)) {	  
+  } else if (!is.null(dupSampleFile)) {
 	  snpsCompResultSnpLevel<-data.frame(Snp=row.names(snpsCompResult$col.wise),SamplesCalled=callSampleNum,
 			  HomConcordanceRate=homAgreeRate,AllConcordanceRate=allAgreeRate,
 			  stringsAsFactors=FALSE)
@@ -141,7 +121,7 @@ snpsComp<-function(snpMatrix1,snpMatrix2=NULL,dupSnpFile=NULL,dupSampleFile=NULL
   } else {
 	  snpsCompResultSnpLevel<-NULL
   }
- 
+
   #analysis sample level
   callSnpNum<-totalSnpNum-rowSums(snpsCompResult$row.wise[,c("NA.agree","NA.disagree")])
   homSampleAgreeRate<-snpsCompResult$row.wise[,"Hom.agree"]/callSnpNum
@@ -150,7 +130,7 @@ snpsComp<-function(snpMatrix1,snpMatrix2=NULL,dupSnpFile=NULL,dupSampleFile=NULL
 	  snpsCompResultSampleLevel<-data.frame(Sample=row.names(snpsCompResult$row.wise),SnpsCalled=callSnpNum,
 			  HomConcordanceRate=homSampleAgreeRate,AllConcordanceRate=allSampleAgreeRate,
 			  stringsAsFactors=FALSE)
-  } else if (!is.null(dupSampleFile)) {	  
+  } else if (!is.null(dupSampleFile)) {
 	  snpsCompResultSampleLevel<-data.frame(Sample1=dupSamples[,1],Sample2=dupSamples[,2],SnpsCalled=callSnpNum,
 			  HomConcordanceRate=homSampleAgreeRate,AllConcordanceRate=allSampleAgreeRate,
 			  stringsAsFactors=FALSE)
@@ -167,6 +147,6 @@ snpsComp<-function(snpMatrix1,snpMatrix2=NULL,dupSnpFile=NULL,dupSampleFile=NULL
   } else {
 	  snpsCompResultSampleLevel<-NULL
   }
-  
+
   return(list(SnpLevel=snpsCompResultSnpLevel,SampleLevel=snpsCompResultSampleLevel))
 }
