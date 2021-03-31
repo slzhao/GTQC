@@ -1,16 +1,21 @@
 Package: GTQC
 Type: Package
-Title: What the Package Does (Title Case)
-Version: 0.2.1
-Author: Shilin Zhao
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
-License: What license is it under?
+Title: GTQC: Automated Genotyping Array Quality Control and Report
+Version: 0.99.0
+Author: Shilin Zhao, Limin Jiang, Hui Yu, Yan Guo
+Maintainer: Shilin Zhao <zhaoshilin@gmail.com>
+Description: R package GTQC streamlines a majority of the quality 
+    control steps and produces a detailed HTML report on a plethora 
+    of quality control metrics, thus enabling a swift and rigorous 
+    data quality inspection prior to downstream GWAS and related 
+    analyses. By significantly cutting down on the time on genotyping 
+    quality control procedures, GTQC ensures maximum utilization of 
+    available resources and minimizes waste and inefficiency.     
+License: GPL (>= 2)
 VignetteBuilder: knitr
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 6.1.1
+RoxygenNote: 7.1.1
 Suggests: 
     BiocStyle
 Depends: 

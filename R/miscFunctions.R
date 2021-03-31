@@ -24,8 +24,14 @@ summaryTable<-function(dataForReport) {
     temp<-NROW(dataForReport$GenderCheckTable)
     reportTable<-rbind(reportTable,c("Samples have different gender in gender check",temp),stringsAsFactors =FALSE)
   }
-  reportTable[,2]<-as.integer(reportTable[,2])
-  colnames(reportTable)<-c("Category","Count")
+
+  if (nrow(reportTable)>0) {
+    reportTable[,2]<-as.integer(reportTable[,2])
+    colnames(reportTable)<-c("Category","Count")
+  } else {
+    message(paste0("No issue identified"))
+    reportTable=NULL
+  }
   return(reportTable)
 }
 

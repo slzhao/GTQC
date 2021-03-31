@@ -1,7 +1,7 @@
 #' @export
 processingPlinkData=function(plinkBed,checkRefAllele=TRUE,dupSnpFile=NULL,dupSampleFile=NULL,raceFile=NULL,aimFile=NULL,
                              MafOutlierCut=0.3,
-                             plinkChrToGenomeChr=c("23"="X","24"="Y"),
+                             plinkChrToGenomeChr=c("23"="X","24"="Y","26"="MT"),
                              raceTo1000GRace=c("CHB"="EAS","JPT"="EAS","CHS"="EAS","CDX"="EAS","KHV"="EAS",
                                                "CEU"="EUR","TSI"="EUR","FIN"="EUR","GBR"="EUR","IBS"="EUR",
                                                "YRI"="AFR","LWK"="AFR","GWD"="AFR","MSL"="AFR","ESN"="AFR","ASW"="AFR","ACB"="AFR",
@@ -19,7 +19,6 @@ processingPlinkData=function(plinkBed,checkRefAllele=TRUE,dupSnpFile=NULL,dupSam
   validSnps=validSnps$V2[validSnps$V2!="."]
 
   dataForReport$plinkRaw <- read.plink(plinkBed,select.snps = validSnps) #bim and fam will be added automaticlly
-
   totalSampleNum=nrow(dataForReport$plinkRaw$fam)
   totalSnpNum=nrow(dataForReport$plinkRaw$map)
   print(paste0("Plink file with ",totalSampleNum," samples and ",totalSnpNum," SNPs was loaded."))
@@ -29,8 +28,6 @@ processingPlinkData=function(plinkBed,checkRefAllele=TRUE,dupSnpFile=NULL,dupSam
   #####################################
   dataForReport$SnpSummary <- col.summary(dataForReport$plinkRaw$genotypes)
   dataForReport$SnpSummary<-cbind(dataForReport$plinkRaw$map,dataForReport$SnpSummary)
-  setDT(dataForReport$SnpSummary)
-  setkey(dataForReport$SnpSummary,chromosome,position)
   #head(dataForReport$SnpSummary)
 
   dataForReport$SampleSummary <- row.summary(dataForReport$plinkRaw$genotypes) #takes about 5 minutes
@@ -41,10 +38,21 @@ processingPlinkData=function(plinkBed,checkRefAllele=TRUE,dupSnpFile=NULL,dupSam
   ######################################
   G1000Population=GenomicScores::populations(MafDb.1Kgenomes.phase3.hs37d5::MafDb.1Kgenomes.phase3.hs37d5)
   snpGRange=dataForReport$SnpSummary[,c("chromosome","position")]
-  snpGRange$chromosome=mapValues(snpGRange$chromosome,plinkChrToGenomeChr)
-  snpGRange=GenomicRanges::makeGRangesFromDataFrame(snpGRange, start.field="position",end.field="position")
-  dataForReport$SnpSummary=cbind(dataForReport$SnpSummary,GenomicRanges::mcols(GenomicScores::gscores(MafDb.1Kgenomes.phase3.hs37d5::MafDb.1Kgenomes.phase3.hs37d5, snpGRange,pop=G1000Population)))
+  snpGRange$chromosome=mapValues(snpGRange$chromosome,plinkChrToGenomeChr)  #change chromosome name format
 
+  snpPositionNaInd=which(is.na(snpGRange$position))
+  snpPositionNotNaInd=which(!is.na(snpGRange$position))
+  if (length(snpPositionNaInd)>0) { #fill NA with chr1 and pos 1, so that can be used to get 1000G MAF
+    snpGRange$chromosome[snpPositionNaInd]="1"
+    snpGRange$position[snpPositionNaInd]=1
+  }
+  snpGRange=GenomicRanges::makeGRangesFromDataFrame(snpGRange, start.field="position",end.field="position")
+  snpG1000MafTable=GenomicRanges::mcols(GenomicScores::gscores(MafDb.1Kgenomes.phase3.hs37d5::MafDb.1Kgenomes.phase3.hs37d5, snpGRange,pop=G1000Population))
+  snpG1000MafTable=data.table(data.frame(snpG1000MafTable))
+  dataForReport$SnpSummary=cbind(dataForReport$SnpSummary,snpG1000MafTable)
+
+  setDT(dataForReport$SnpSummary)
+  setkey(dataForReport$SnpSummary,chromosome,position)
 
   ######################################
   #work on Race
@@ -92,10 +100,14 @@ processingPlinkData=function(plinkBed,checkRefAllele=TRUE,dupSnpFile=NULL,dupSam
   if (checkRefAllele) {
     print(paste0("Checking if the major alleles are hg19 reference alleles:"))
     chrToCheck=dataForReport$SnpSummary$chromosome
-    chrToCheck[chrToCheck==23]="X"
-    chrToCheck[chrToCheck==24]="Y"
+    snpPositionNotNaInd=which(!is.na(chrToCheck))
+    #chrToCheck[chrToCheck==23]="X"
+    #chrToCheck[chrToCheck==24]="Y"
+    chrToCheck=mapValues(chrToCheck,plinkChrToGenomeChr)
     chrToCheck=paste0("chr",chrToCheck)
-    genomeRefAllele<-BSgenome::getSeq(BSgenome.Hsapiens.UCSC.hg19::BSgenome.Hsapiens.UCSC.hg19,chrToCheck,dataForReport$SnpSummary$position,width=1, as.character=TRUE)
+
+    genomeRefAllele=rep(NA,nrow(dataForReport$SnpSummary))
+    genomeRefAllele[snpPositionNotNaInd]<-BSgenome::getSeq(BSgenome.Hsapiens.UCSC.hg19::BSgenome.Hsapiens.UCSC.hg19,chrToCheck[snpPositionNotNaInd],dataForReport$SnpSummary$position[snpPositionNotNaInd],width=1, as.character=TRUE)
     majorAlleleAsRef<-rep(NA,nrow(dataForReport$SnpSummary))
     majorAlleleAsRef[which(dataForReport$SnpSummary$allele.1==genomeRefAllele)]<-0
     majorAlleleAsRef[which(dataForReport$SnpSummary$allele.2==genomeRefAllele)]<-1
@@ -123,18 +135,18 @@ processingPlinkData=function(plinkBed,checkRefAllele=TRUE,dupSnpFile=NULL,dupSam
   ######################################
   #sex check by plink
   ######################################
-  if (Sys.which("plink")!="") {
-    #genderCheckFile<-paste0(plinkOutDir,"/genderCheck.sexcheck")
-    genderCheckFile<-paste0(tempdir(),"/genderCheck.sexcheck")
+  genderCheckFile<-paste0(dirname(plinkBed),"/",file_path_sans_ext(basename(plinkBed)),".sexcheck")
+  if (Sys.which("plink")!="" | file.exists(genderCheckFile)) {
     if (!file.exists(genderCheckFile)) {
       print(paste0("Gender Check by Plink:"))
+      genderCheckFile<-paste0(tempdir(),"/genderCheck.sexcheck")
       plinkCmd<-paste0("plink --noweb --bfile ",file_path_sans_ext(plinkBed)," --maf 0.1 --check-sex --out ",file_path_sans_ext(genderCheckFile))
       system(plinkCmd)
     }
     dataForReport$GenderCheckTable<-read.table(genderCheckFile,header=T,as.is=T)
     dataForReport$GenderCheckTable<-dataForReport$GenderCheckTable[which(dataForReport$GenderCheckTable$STATUS=="PROBLEM"),]
   } else {
-    warning(paste0("Can't find plink in path. Skip gender check."))
+    warning(paste0("Can't find plink in path nor plink sexcheck result file. Skip gender check."))
   }
 
   ######################################
@@ -144,7 +156,7 @@ processingPlinkData=function(plinkBed,checkRefAllele=TRUE,dupSnpFile=NULL,dupSam
   hweZCol<-grep("\\z\\.HWE$",colnames(dataForReport$SnpSummary))
   if (length(hweZCol)>0) {
     print(paste0("Analyzing Hardy-weinberg equilibrium:"))
-    temp<-as.data.table(2*pnorm(-abs(as.matrix(dataForReport$SnpSummary[,hweZCol]))))
+    temp<-as.data.table(2*pnorm(-abs(as.matrix(dataForReport$SnpSummary[,..hweZCol]))))
     colnames(temp)<-gsub("\\z\\.HWE$","p.HWE",colnames(temp))
     dataForReport$SnpSummary<-cbind(dataForReport$SnpSummary,temp)
   }

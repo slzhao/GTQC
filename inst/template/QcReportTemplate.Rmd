@@ -89,8 +89,8 @@ plotVar(dataForReport$SnpSummary,varName="MAF")
   snpSummaryOutColNames1<-c("chromosome","position","snp.name","allele.1","allele.2")
 #  snpSummaryOutColNames3<-c("G1000.id","G1000.ref","G1000.alt")
   
-  temp1<-dataForReport$SnpSummary[,"AF"]
-  temp2<-dataForReport$SnpSummary[,"MAF"]
+  temp1<-dataForReport$SnpSummary[["AF"]]
+  temp2<-dataForReport$SnpSummary[["MAF"]]
   plot(temp1,temp2,pch=16,cex=0.3,xlab="MAF in 1000 Genomes",ylab="MAF in this data",main="Overall MAF")
   mafOutlierDiff<-temp2-temp1
   mafOutlierInd<-which(abs(mafOutlierDiff)>=dataForReport$MafOutlierCut)
@@ -102,7 +102,7 @@ plotVar(dataForReport$SnpSummary,varName="MAF")
 #    snpSummaryOutColNames<-c(snpSummaryOutColNames1,snpSummaryOutColNames2,snpSummaryOutColNames3,snpSummaryOutColNames4)
     snpSummaryOutColNames<-c(snpSummaryOutColNames1,snpSummaryOutColNames2,snpSummaryOutColNames4)
     
-    mafOutlierTable<-dataForReport$SnpSummary[mafOutlierInd,snpSummaryOutColNames]
+    mafOutlierTable<-dataForReport$SnpSummary[mafOutlierInd,..snpSummaryOutColNames]
     mafOutlierTable$Diff=mafOutlierDiff
     #setorder(mafOutlierTable, -Diff)
     mafOutlierTable=mafOutlierTable[rev(order(abs(mafOutlierDiff))),]
@@ -112,11 +112,11 @@ plotVar(dataForReport$SnpSummary,varName="MAF")
     print(tagList(out))
   }
   
-  if (dataForReport$ReportRace) {
+  if (!is.null(dataForReport$ReportRace) && dataForReport$ReportRace) {
     cat("\n\n### MAF Consistency with 1000 Genome by Race\n")
     for (i in 1:nrow(dataForReport$MafReportPairs)) {
-      temp1<-dataForReport$SnpSummary[,dataForReport$MafReportPairs[i,1]]
-      temp2<-dataForReport$SnpSummary[,dataForReport$MafReportPairs[i,2]]
+      temp1<-dataForReport$SnpSummary[[dataForReport$MafReportPairs[i,1]]]
+      temp2<-dataForReport$SnpSummary[[dataForReport$MafReportPairs[i,2]]]
       plot(temp1,temp2,pch=16,cex=0.3,xlab="MAF in 1000 Genomes",ylab="MAF in this data",main=paste0(dataForReport$MafReportPairs[i,2]))
       
       mafOutlierDiff<-temp2-temp1
@@ -128,7 +128,7 @@ plotVar(dataForReport$SnpSummary,varName="MAF")
           #snpSummaryOutColNames<-c(snpSummaryOutColNames1,snpSummaryOutColNames2,snpSummaryOutColNames3,snpSummaryOutColNames4)
           snpSummaryOutColNames<-c(snpSummaryOutColNames1,snpSummaryOutColNames2,snpSummaryOutColNames4)
     
-          mafOutlierTable<-dataForReport$SnpSummary[mafOutlierInd,snpSummaryOutColNames]
+          mafOutlierTable<-dataForReport$SnpSummary[mafOutlierInd,..snpSummaryOutColNames]
           mafOutlierTable$Diff=mafOutlierDiff
           #setorder(mafOutlierTable, -Diff)
           mafOutlierTable=mafOutlierTable[rev(order(abs(mafOutlierDiff))),]
@@ -231,8 +231,13 @@ if (!is.null(dataForReport$SampleRatio) & !is.null(dataForReport$SampleSummary$R
 # AIM PCA
 ```{r,echo=FALSE,results='asis',message=FALSE,fig.align='center',warning=FALSE}
 if (!is.null(dataForReport$AimPcaResult)) {
+  if (!is.null(dataForReport$ReportRace) && dataForReport$ReportRace) {
     dataForPlot<-data.frame(dataForReport$AimPcaResult,Race=dataForReport$SampleSummary$Race)
     p<-ggplot(dataForPlot,aes(x=PC1,y=PC2))+geom_point(aes(colour=Race))
+  } else { #no race information
+    dataForPlot<-data.frame(dataForReport$AimPcaResult)
+    p<-ggplot(dataForPlot,aes(x=PC1,y=PC2))+geom_point()
+  }
     print(p)
 }
 
